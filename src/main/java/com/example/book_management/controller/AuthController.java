@@ -5,7 +5,9 @@ import com.example.book_management.dto.AuthReqDTO;
 import com.example.book_management.dto.AuthResDTO;
 import com.example.book_management.entity.User;
 import com.example.book_management.repository.UserRepository;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.stream.Collectors;
@@ -14,35 +16,36 @@ import java.util.stream.Collectors;
 @RequestMapping("/auth")
 public class AuthController {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
 
-    public AuthController(UserRepository userRepository,
-                          PasswordEncoder passwordEncoder,
+    public AuthController(AuthenticationManager authenticationManager,
                           JwtUtil jwtUtil) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
+        this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
     }
 
     @PostMapping("/login")
     public AuthResDTO login(@RequestBody AuthReqDTO request) {
 
-        User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("Invalid username"));
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getUsername(),
+                        request.getPassword()
+                )
+        );
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid password");
-        }
+        org.springframework.security.core.userdetails.User userDetails =
+                (org.springframework.security.core.userdetails.User) authentication.getPrincipal();
 
         String token = jwtUtil.generateToken(
-                user.getUsername(),
-                user.getRoles().stream()
-                        .map(r -> "ROLE_" + r.getName())
-                        .collect(Collectors.toList())
+                userDetails.getUsername(),
+                userDetails.getAuthorities().stream()
+                        .map(auth -> auth.getAuthority())
+                        .toList()
         );
 
         return new AuthResDTO(token);
     }
+
 }

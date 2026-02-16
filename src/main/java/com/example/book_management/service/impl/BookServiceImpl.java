@@ -2,6 +2,7 @@ package com.example.book_management.service.impl;
 
 import com.example.book_management.dto.BookReqDTO;
 import com.example.book_management.dto.BookResDTO;
+import com.example.book_management.dto.PageResponseDTO;
 import com.example.book_management.entity.Author;
 import com.example.book_management.entity.Book;
 import com.example.book_management.entity.Category;
@@ -12,6 +13,8 @@ import com.example.book_management.repository.CategoryRepository;
 import com.example.book_management.service.BookService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +37,7 @@ public class BookServiceImpl implements BookService {
 
     @Transactional
     @Override
+    @CacheEvict(value = "books", allEntries = true)
     public BookResDTO createBook(BookReqDTO bookReqDTO) {
         Book book = reqToBook(bookReqDTO);
         Book savedBook = bookRepository.save(book);
@@ -42,19 +46,30 @@ public class BookServiceImpl implements BookService {
     }
 
     @Override
+    @Cacheable(value = "books", key = "#id")
     public BookResDTO getBookById(Long id) {
         Book bookFound = bookRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Book not found with this id: " + id));
         return mapToResponse(bookFound);
     }
 
     @Override
-    public Page<BookResDTO> getBooks(int page, int size, String sort) {
+    @Cacheable(value = "booksPage", key = "'page_'+#page+'_size_'+#size+'_sort_'+#sort")
+    public PageResponseDTO<BookResDTO> getBooks(int page, int size, String sort) {
         Pageable pageable = PageRequest.of(page, size);
         Page<Book> bookPage = bookRepository.findByTitleContainingIgnoreCase(sort, pageable);
-        return bookPage.map(i -> mapToResponse(i));
+        return new PageResponseDTO<>(
+                bookPage.getContent().stream()
+                        .map(this::mapToResponse)
+                        .toList(),
+                bookPage.getNumber(),
+                bookPage.getSize(),
+                bookPage.getTotalElements(),
+                bookPage.getTotalPages()
+        );
     }
 
     @Override
+    @CacheEvict(value = "books", allEntries = true)
     public BookResDTO updateBook(Long id, BookReqDTO bookReqDTO) {
         Book book = reqToBook(bookReqDTO);
         book.setId(id);
@@ -63,6 +78,7 @@ public class BookServiceImpl implements BookService {
     }
 
     @Override
+    @CacheEvict(value = "books", allEntries = true)
     public void deleteBook(Long id) {
         bookRepository.deleteById(id);
     }

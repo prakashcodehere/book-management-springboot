@@ -2,6 +2,7 @@ package com.example.book_management.service;
 
 import com.example.book_management.dto.BookReqDTO;
 import com.example.book_management.dto.BookResDTO;
+import com.example.book_management.dto.PageResponseDTO;
 import org.springframework.data.domain.Page;
 
 
@@ -11,7 +12,7 @@ public interface BookService {
 
     BookResDTO getBookById(Long id);
 
-    Page<BookResDTO> getBooks(int page, int size, String sort);
+    PageResponseDTO<BookResDTO> getBooks(int page, int size, String sort);
 
     BookResDTO updateBook(Long id, BookReqDTO book);
 

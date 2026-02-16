@@ -3,6 +3,7 @@ package com.example.book_management.controller;
 import com.example.book_management.dto.ApiResponseDTO;
 import com.example.book_management.dto.BookReqDTO;
 import com.example.book_management.dto.BookResDTO;
+import com.example.book_management.dto.PageResponseDTO;
 import com.example.book_management.service.BookService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -61,7 +62,7 @@ public class BookController {
     }
 
     @GetMapping("getBooks")
-    public ResponseEntity<ApiResponseDTO<Page<BookResDTO>>> getBooks(
+    public ResponseEntity<ApiResponseDTO<PageResponseDTO<BookResDTO>>> getBooks(
             @RequestParam int page,
             @RequestParam int size,
             @RequestParam String sort) {
