@@ -17,15 +17,35 @@ pipeline {
         }
 
         stage('Wait for MySQL') {
+            options {
+                timeout(time: 2, unit: 'MINUTES')
+            }
             steps {
-                bat 'timeout /t 20 /nobreak'
-                bat 'docker compose ps'
+                bat '''
+                echo Waiting for MySQL to become healthy...
+
+                :waitloop
+                docker compose ps mysql-db | findstr "healthy" >nul
+
+                if %ERRORLEVEL% EQU 0 (
+                    echo MySQL is healthy!
+                    goto :done
+                )
+
+                echo MySQL is not ready yet. Waiting 5 seconds...
+                ping 127.0.0.1 -n 6 >nul
+                goto :waitloop
+
+                :done
+                echo MySQL is ready!
+                docker compose ps mysql-db
+                '''
             }
         }
 
         stage('Build & Test') {
             steps {
-                bat 'mvnw.cmd clean test'
+                bat 'mvn clean test'
             }
         }
 
@@ -37,31 +57,29 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                bat 'docker compose up -d'
+                bat 'docker compose up -d book-management-app'
             }
         }
 
         stage('Verify Deployment') {
             steps {
-                bat 'timeout /t 10 /nobreak'
-                bat 'curl http://localhost:9090'
+                bat 'docker compose ps'
             }
         }
     }
 
     post {
-
         always {
             echo 'Deployment status:'
             bat 'docker compose ps'
         }
 
-        failure {
-            echo 'Pipeline failed!'
+        success {
+            echo 'Pipeline completed successfully!'
         }
 
-        success {
-            echo 'CI/CD pipeline completed successfully!'
+        failure {
+            echo 'Pipeline failed!'
         }
     }
 }
