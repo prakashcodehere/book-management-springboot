@@ -5,7 +5,7 @@ FROM eclipse-temurin:21-jdk-jammy
 WORKDIR /app
 
 # 3. Copy jar from target to container
-COPY target/book-management-0.0.1-SNAPSHOT.jar app.jar
+COPY target/*.jar app.jar
 
 # 4. Expose application port
 EXPOSE 9090
