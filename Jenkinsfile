@@ -51,7 +51,12 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                bat 'docker compose build book-management-app'
+                bat '''
+                echo ===== TARGET DIRECTORY =====
+                dir target
+                echo ===========================
+                docker compose build book-management-app
+                '''
             }
         }
 
